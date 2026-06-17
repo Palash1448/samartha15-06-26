@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
         if (cachedResponse) {
           // Return cached image immediately and update cache in background
           fetch(request).then((response) => {
-            if (response.status === 200) {
+            if (response.status === 200 || (response.status === 0 && response.type === 'opaque')) {
               cache.put(request, response.clone());
             }
           }).catch(() => {
@@ -61,7 +61,7 @@ self.addEventListener('fetch', (event) => {
           // No cached version, fetch from network
           try {
             const response = await fetch(request);
-            if (response.status === 200) {
+            if (response.status === 200 || (response.status === 0 && response.type === 'opaque')) {
               cache.put(request, response.clone());
             }
             return response;
@@ -141,8 +141,11 @@ async function preloadImages(urls) {
   
   for (const url of urls) {
     try {
-      const response = await fetch(url);
-      if (response.status === 200) {
+      const isExternal = url.startsWith('http') && !url.startsWith(self.location.origin);
+      const fetchOptions = isExternal ? { mode: 'no-cors' } : {};
+      
+      const response = await fetch(url, fetchOptions);
+      if (response.status === 200 || (response.status === 0 && response.type === 'opaque')) {
         await cache.put(url, response);
       }
     } catch (error) {
