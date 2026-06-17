@@ -88,8 +88,21 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       }).catch(() => {
-        // Fallback to cache
-        return caches.match(request);
+        // Fallback to cache, or handle offline navigation fallback
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          if (request.mode === 'navigate') {
+            return caches.match('/').then((fallbackResponse) => {
+              if (fallbackResponse) {
+                return fallbackResponse;
+              }
+              throw new Error('Offline and index.html not available in cache');
+            });
+          }
+          throw new Error('Network request failed and resource not cached');
+        });
       })
     );
   }
